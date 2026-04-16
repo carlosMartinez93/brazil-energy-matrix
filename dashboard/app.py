@@ -299,7 +299,7 @@ app.layout = html.Div(
             ], className="mb-4 g-3"),
 
             html.P(
-                "Carlos Henrique · Analytics & ML Engineer · github.com/carloshenrique",
+                "Carlos Henrique · Analytics & ML Engineer · github.com/carlosMartinez93/brazil-energy-matrix",
                 style={"textAlign": "center", "color": TEXT_SEC, "fontSize": "12px", "marginTop": "8px"},
             ),
         ]),
