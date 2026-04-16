@@ -1,0 +1,61 @@
+ano,fonte,tipo_fonte,grupo_fonte,geracao_total_gwh,participacao_pct,renovavel
+2015,Biomassa,Renovável,Biomassa,132328.86,5.64,True
+2015,Eólica,Renovável,Novas renováveis,270716.49,11.54,True
+2015,Hidráulica,Renovável,Hídrica,1465467.3599999999,62.5,True
+2015,Nuclear,Baixo carbono,Nuclear,66244.68000000001,2.83,False
+2015,Solar,Renovável,Novas renováveis,16654.260000000002,0.71,True
+2015,Termelétrica,Não renovável,Fóssil,393488.09,16.78,False
+2016,Biomassa,Renovável,Biomassa,134868.5,5.7,True
+2016,Eólica,Renovável,Novas renováveis,286471.45,12.11,True
+2016,Hidráulica,Renovável,Hídrica,1459366.34,61.68,True
+2016,Nuclear,Baixo carbono,Nuclear,65392.270000000004,2.76,False
+2016,Solar,Renovável,Novas renováveis,18680.0,0.79,True
+2016,Termelétrica,Não renovável,Fóssil,401272.54,16.96,False
+2017,Biomassa,Renovável,Biomassa,137785.32,5.78,True
+2017,Eólica,Renovável,Novas renováveis,306077.0,12.84,True
+2017,Hidráulica,Renovável,Hídrica,1450595.82,60.85,True
+2017,Nuclear,Baixo carbono,Nuclear,66240.55,2.78,False
+2017,Solar,Renovável,Novas renováveis,20703.37,0.87,True
+2017,Termelétrica,Não renovável,Fóssil,402673.97,16.89,False
+2018,Biomassa,Renovável,Biomassa,141454.88999999998,5.85,True
+2018,Eólica,Renovável,Novas renováveis,325648.35,13.48,True
+2018,Hidráulica,Renovável,Hídrica,1448394.75,59.94,True
+2018,Nuclear,Baixo carbono,Nuclear,66351.85,2.75,False
+2018,Solar,Renovável,Novas renováveis,23314.03,0.96,True
+2018,Termelétrica,Não renovável,Fóssil,411344.14,17.02,False
+2019,Biomassa,Renovável,Biomassa,143983.8,5.96,True
+2019,Eólica,Renovável,Novas renováveis,340912.49,14.11,True
+2019,Hidráulica,Renovável,Hídrica,1424627.26,58.96,True
+2019,Nuclear,Baixo carbono,Nuclear,66001.92,2.73,False
+2019,Solar,Renovável,Novas renováveis,26011.68,1.08,True
+2019,Termelétrica,Não renovável,Fóssil,414855.96,17.17,False
+2020,Biomassa,Renovável,Biomassa,146956.97,6.03,True
+2020,Eólica,Renovável,Novas renováveis,364133.61,14.94,True
+2020,Hidráulica,Renovável,Hídrica,1411015.2,57.9,True
+2020,Nuclear,Baixo carbono,Nuclear,66330.67,2.72,False
+2020,Solar,Renovável,Novas renováveis,29328.97,1.2,True
+2020,Termelétrica,Não renovável,Fóssil,419101.8,17.2,False
+2021,Biomassa,Renovável,Biomassa,148498.16,6.04,True
+2021,Eólica,Renovável,Novas renováveis,383380.12,15.59,True
+2021,Hidráulica,Renovável,Hídrica,1407865.01,57.26,True
+2021,Nuclear,Baixo carbono,Nuclear,66174.08,2.69,False
+2021,Solar,Renovável,Novas renováveis,32766.76,1.33,True
+2021,Termelétrica,Não renovável,Fóssil,419963.08,17.08,False
+2022,Biomassa,Renovável,Biomassa,152083.51,6.18,True
+2022,Eólica,Renovável,Novas renováveis,408518.45,16.6,True
+2022,Hidráulica,Renovável,Hídrica,1373992.17,55.82,True
+2022,Nuclear,Baixo carbono,Nuclear,66369.26,2.7,False
+2022,Solar,Renovável,Novas renováveis,36859.22,1.5,True
+2022,Termelétrica,Não renovável,Fóssil,423842.92,17.22,False
+2023,Biomassa,Renovável,Biomassa,155464.45,6.2,True
+2023,Eólica,Renovável,Novas renováveis,434299.97000000003,17.32,True
+2023,Hidráulica,Renovável,Hídrica,1383847.28,55.17,True
+2023,Nuclear,Baixo carbono,Nuclear,66101.14,2.64,False
+2023,Solar,Renovável,Novas renováveis,41414.44,1.65,True
+2023,Termelétrica,Não renovável,Fóssil,427004.84,17.02,False
+2024,Biomassa,Renovável,Biomassa,157993.0,6.23,True
+2024,Eólica,Renovável,Novas renováveis,462407.63,18.22,True
+2024,Hidráulica,Renovável,Hídrica,1370186.89,54.0,True
+2024,Nuclear,Baixo carbono,Nuclear,66508.55,2.62,False
+2024,Solar,Renovável,Novas renováveis,45796.04,1.8,True
+2024,Termelétrica,Não renovável,Fóssil,434701.88,17.13,False
