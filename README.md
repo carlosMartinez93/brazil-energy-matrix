@@ -160,8 +160,8 @@ Acesse: [http://localhost:8050](http://localhost:8050)
 
 **Carlos Henrique**  
 Analytics Engineer | ML Engineer  
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)](https://linkedin.com/in/carloshenrique)
-[![GitHub](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/carloshenrique)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)]([https://linkedin.com/in/carloshenrique](https://www.linkedin.com/in/carlos-henrique-calvo-martinez-044ab9124/))
+[![GitHub](https://img.shields.io/badge/GitHub-black?logo=github)]([https://github.com/carloshenrique](https://github.com/carlosMartinez93))
 
 ---
 
