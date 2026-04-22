@@ -1,73 +1,73 @@
-# ⚡ Matriz Energética Brasileira — Análise e Dashboard Interativo
+# ⚡ Brazilian Energy Matrix — Analysis and Interactive Dashboard
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![Plotly Dash](https://img.shields.io/badge/Plotly_Dash-2.14+-purple?logo=plotly)
 ![SQL](https://img.shields.io/badge/SQL-PostgreSQL-blue?logo=postgresql)
-![Status](https://img.shields.io/badge/Status-Ativo-green)
-![Fontes](https://img.shields.io/badge/Dados-ONS_%7C_ANEEL-orange)
+![Status](https://img.shields.io/badge/Status-Active-green)
+![Sources](https://img.shields.io/badge/Data-ONS_%7C_ANEEL-orange)
 
-## 📌 Visão Geral
+## 📌 Overview
 
-Dashboard interativo que analisa a evolução da matriz de geração elétrica brasileira entre **2015 e 2024**, com foco na transição energética e no crescimento das fontes renováveis — especialmente solar e eólica.
+Interactive dashboard that analyzes the evolution of Brazil's electricity generation matrix between **2015 and 2024**, focusing on the energy transition and the growth of renewable sources — especially solar and wind.
 
-O projeto responde perguntas como:
-- Como a participação das fontes na matriz mudou ao longo da última década?
-- A energia solar e eólica já superaram alguma fonte tradicional?
-- Qual o percentual renovável da matriz em cada ano?
-- Como a sazonalidade (seca/chuva) afeta a geração hídrica?
+The project answers questions such as:
+- How has each source's share in the matrix changed over the last decade?
+- Have solar and wind already surpassed any traditional source?
+- What is the renewable percentage of the matrix in each year?
+- How does seasonality (dry/rainy season) affect hydro generation?
 
 ---
 
-## 🗂️ Estrutura do Projeto
+## 🗂️ Project Structure
 
 ```
 energia-brasil/
 ├── data/
-│   ├── raw/                  # Dados brutos (ONS, ANEEL)
-│   └── processed/            # Dados tratados prontos para análise
+│   ├── raw/                  # Raw data (ONS, ANEEL)
+│   └── processed/            # Cleaned data ready for analysis
 ├── src/
-│   ├── ingestao.py           # Coleta de dados via APIs públicas
-│   └── transformacao.py      # Limpeza, enriquecimento e agregações
+│   ├── ingestao.py           # Data collection via public APIs
+│   └── transformacao.py      # Cleaning, enrichment and aggregations
 ├── dashboard/
-│   └── app.py                # Dashboard Plotly Dash
+│   └── app.py                # Plotly Dash dashboard
 ├── sql/
-│   └── queries_energia.sql   # Análises SQL comentadas
+│   └── queries_energia.sql   # Annotated SQL analyses
 ├── docs/
-│   └── arquitetura.png       # Diagrama do pipeline
+│   └── arquitetura.png       # Pipeline diagram
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## 🔌 Fontes de Dados
+## 🔌 Data Sources
 
-| Fonte | Dado | Acesso |
-|-------|------|--------|
-| **ONS** (Operador Nacional do Sistema Elétrico) | Geração por usina e subsistema | [dados.ons.org.br](https://dados.ons.org.br) |
-| **ANEEL** | Capacidade instalada — SIGA | [dadosabertos.aneel.gov.br](https://dadosabertos.aneel.gov.br) |
-| **ANEEL** | Geração distribuída (solar / mini geração) | [dadosabertos.aneel.gov.br](https://dadosabertos.aneel.gov.br) |
+| Source | Data | Access |
+|--------|------|--------|
+| **ONS** (National Electric System Operator) | Generation by plant and subsystem | [dados.ons.org.br](https://dados.ons.org.br) |
+| **ANEEL** | Installed capacity — SIGA | [dadosabertos.aneel.gov.br](https://dadosabertos.aneel.gov.br) |
+| **ANEEL** | Distributed generation (solar / mini generation) | [dadosabertos.aneel.gov.br](https://dadosabertos.aneel.gov.br) |
 
-> Dados abertos, gratuitos e com atualização regular pelo governo federal.
-
----
-
-## 🛠️ Stack Técnica
-
-| Camada | Tecnologia |
-|--------|-----------|
-| Ingestão | Python + Requests + API REST |
-| Transformação | Pandas, NumPy |
-| Armazenamento | Parquet (local) / Azure Blob Storage |
-| Análise SQL | PostgreSQL / DuckDB |
-| Visualização | Plotly Dash + Bootstrap |
-| Deploy (opcional) | Azure Container Apps |
+> Open data, free of charge, and regularly updated by the federal government.
 
 ---
 
-## 🚀 Como Executar
+## 🛠️ Tech Stack
 
-### 1. Clone e instale dependências
+| Layer | Technology |
+|-------|-----------|
+| Ingestion | Python + Requests + REST API |
+| Transformation | Pandas, NumPy |
+| Storage | Parquet (local) / Azure Blob Storage |
+| SQL Analysis | PostgreSQL / DuckDB |
+| Visualization | Plotly Dash + Bootstrap |
+| Deploy (optional) | Azure Container Apps |
+
+---
+
+## 🚀 How to Run
+
+### 1. Clone and install dependencies
 
 ```bash
 git clone https://github.com/carlosMartinez93/brazil-energy-matrix.git
@@ -75,88 +75,88 @@ cd brazil-energy-matrix
 pip install -r requirements.txt
 ```
 
-### 2. Coleta os dados
+### 2. Collect data
 
 ```bash
 python src/ingestao.py
 ```
 
-> **Nota:** Se a API do ONS estiver indisponível, o script gera automaticamente dados sintéticos realistas para desenvolvimento.
+> **Note:** If the ONS API is unavailable, the script automatically generates realistic synthetic data for development.
 
-### 3. Transforma e processa
+### 3. Transform and process
 
 ```bash
 python src/transformacao.py
 ```
 
-### 4. Sobe o dashboard
+### 4. Launch the dashboard
 
 ```bash
 python dashboard/app.py
 ```
 
-Acesse: [http://localhost:8050](http://localhost:8050)
+Access: [http://localhost:8050](http://localhost:8050)
 
 ---
 
-## 📊 Funcionalidades do Dashboard
+## 📊 Dashboard Features
 
-- **Filtros interativos** por período (2015–2024) e fonte de energia
-- **4 KPIs dinâmicos**: geração total, mix renovável, crescimento solar e eólica
-- **Gráfico de linha** com evolução da geração por fonte ao longo do tempo
-- **Gráfico de pizza** com composição do último ano selecionado
-- **Gráfico de área empilhada** com participação percentual de cada fonte
-- **Indicador de mix renovável** com percentual ano a ano
-- **Insights automáticos** gerados a partir dos dados filtrados
-
----
-
-## 💡 Principais Insights Encontrados
-
-1. **A energia solar foi a fonte de maior crescimento**: expansão superior a 1.000% entre 2015 e 2024, impulsionada pela queda de custos dos painéis fotovoltaicos.
-
-2. **A eólica já supera a termelétrica** em participação na matriz — uma inversão ocorrida por volta de 2021.
-
-3. **O Brasil mantém mais de 80% de geração renovável**, liderança mundial que coloca o país em posição favorável na agenda ESG global.
-
-4. **A sazonalidade hídrica é crítica**: anos de seca (como 2021) forçam acionamento de termelétricas, elevando o custo da energia e as emissões de CO₂.
-
-5. **Nordeste e Centro-Oeste lideram** a expansão de novas renováveis — solar e eólica —, enquanto o Sul concentra a biomassa.
+- **Interactive filters** by period (2015–2024) and energy source
+- **4 dynamic KPIs**: total generation, renewable mix, solar and wind growth
+- **Line chart** showing generation evolution by source over time
+- **Pie chart** with composition for the last selected year
+- **Stacked area chart** with percentage share of each source
+- **Renewable mix indicator** with year-over-year percentage
+- **Automatic insights** generated from filtered data
 
 ---
 
-## 🗃️ Análises SQL Incluídas
+## 💡 Key Findings
 
-- Geração total por fonte e ano com participação percentual
-- Evolução do mix renovável ao longo do tempo
-- Crescimento YoY (year-over-year) por fonte
-- Ranking de fontes no último ano disponível
-- Comparativo hídrica × novas renováveis (inversão de tendência)
-- Análise de sazonalidade mensal por fonte
+1. **Solar energy was the fastest-growing source**: over 1,000% expansion between 2015 and 2024, driven by the falling cost of photovoltaic panels.
 
----
+2. **Wind already surpasses thermal power** in matrix share — a crossover that occurred around 2021.
 
-## 📁 Dados Gerados
+3. **Brazil maintains over 80% renewable generation**, a world-leading position that places the country in a favorable spot on the global ESG agenda.
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `geracao_completa.parquet` | Base completa mensal por fonte e subsistema |
-| `geracao_anual_por_fonte.parquet` | Agregado anual com participação % |
-| `crescimento_solar_eolica.parquet` | Série mensal + variação YoY |
-| `mix_renovavel_anual.csv` | Mix renovável por ano (compatível com Power BI) |
+4. **Hydro seasonality is critical**: drought years (such as 2021) force thermal plants into operation, raising energy costs and CO₂ emissions.
+
+5. **Northeast and Center-West lead** the expansion of new renewables — solar and wind —, while the South concentrates biomass.
 
 ---
 
-## 📌 Próximos Passos
+## 🗃️ Included SQL Analyses
 
-- [ ] Integrar dados climáticos (precipitação) para correlacionar com variação hídrica
-- [ ] Adicionar projeções até 2030 com base nas metas do PNE (Plano Nacional de Energia)
-- [ ] Deploy no Azure Container Apps com atualização automática dos dados
-- [ ] Versão Power BI do dashboard para contexto corporativo
+- Total generation by source and year with percentage share
+- Evolution of the renewable mix over time
+- Year-over-year (YoY) growth by source
+- Source ranking for the latest available year
+- Hydro vs. new renewables comparison (trend crossover)
+- Monthly seasonality analysis by source
 
 ---
 
-## 👤 Autor
+## 📁 Generated Data
+
+| File | Description |
+|------|-------------|
+| `geracao_completa.parquet` | Full monthly base by source and subsystem |
+| `geracao_anual_por_fonte.parquet` | Annual aggregate with % share |
+| `crescimento_solar_eolica.parquet` | Monthly series + YoY variation |
+| `mix_renovavel_anual.csv` | Renewable mix by year (Power BI compatible) |
+
+---
+
+## 📌 Next Steps
+
+- [ ] Integrate climate data (precipitation) to correlate with hydro variation
+- [ ] Add projections through 2030 based on PNE (National Energy Plan) targets
+- [ ] Deploy on Azure Container Apps with automatic data updates
+- [ ] Power BI version of the dashboard for corporate context
+
+---
+
+## 👤 Author
 
 **Carlos Henrique**  
 Analytics Engineer | ML Engineer  
@@ -165,6 +165,6 @@ Analytics Engineer | ML Engineer
 
 ---
 
-## 📄 Licença
+## 📄 License
 
-MIT License — livre para uso, adaptação e distribuição com atribuição.
+MIT License — free to use, adapt, and distribute with attribution.
