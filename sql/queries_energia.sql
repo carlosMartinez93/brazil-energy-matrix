@@ -2,7 +2,7 @@
 -- queries_energia.sql
 -- Analysis of the Brazilian Energy Matrix
 -- Author: Carlos Henrique
--- Data source: ONS (ons.org.br) and ANEEL (aneel.gov.br)
+-- Data source: ONS open data, "Balanço de Energia nos Subsistemas" (dados.ons.org.br)
 -- ============================================================
 
 
@@ -26,28 +26,28 @@ ORDER BY ano, generation_gwh DESC;
 
 
 -- ============================================================
--- 2. RENEWABLE MIX EVOLUTION (% of the matrix)
+-- 2. HYDRO + WIND + SOLAR SHARE (% of generation - biomass and nuclear sit inside thermal in the ONS dataset)
 -- ============================================================
 WITH total_by_year AS (
     SELECT ano, SUM(geracao_total_gwh) AS total_gwh
     FROM geracao_anual_por_fonte
     GROUP BY ano
 ),
-renewable_by_year AS (
-    SELECT ano, SUM(geracao_total_gwh) AS gwh_renovavel
+hydro_wind_solar_by_year AS (
+    SELECT ano, SUM(geracao_total_gwh) AS gwh_hydro_wind_solar
     FROM geracao_anual_por_fonte
-    WHERE tipo_fonte = 'Renovável'
+    WHERE tipo_fonte = 'Hidro+Eólica+Solar'
     GROUP BY ano
 )
 SELECT
     t.ano,
     ROUND(t.total_gwh, 0)                                          AS total_generation_gwh,
-    ROUND(r.gwh_renovavel, 0)                                      AS renewable_generation_gwh,
-    ROUND(r.gwh_renovavel * 100.0 / t.total_gwh, 2)               AS pct_renewable,
-    ROUND(t.total_gwh - r.gwh_renovavel, 0)                       AS non_renewable_generation_gwh,
-    ROUND((t.total_gwh - r.gwh_renovavel) * 100.0 / t.total_gwh, 2) AS pct_non_renewable
+    ROUND(r.gwh_hydro_wind_solar, 0)                                      AS hydro_wind_solar_generation_gwh,
+    ROUND(r.gwh_hydro_wind_solar * 100.0 / t.total_gwh, 2)               AS pct_hydro_wind_solar,
+    ROUND(t.total_gwh - r.gwh_hydro_wind_solar, 0)                       AS thermal_generation_gwh,
+    ROUND((t.total_gwh - r.gwh_hydro_wind_solar) * 100.0 / t.total_gwh, 2) AS pct_thermal
 FROM total_by_year t
-JOIN renewable_by_year r USING (ano)
+JOIN hydro_wind_solar_by_year r USING (ano)
 ORDER BY ano;
 
 

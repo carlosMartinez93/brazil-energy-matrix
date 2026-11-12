@@ -1,0 +1,14 @@
+{
+  "origem": "ons_bigquery",
+  "fonte_original": "ONS - Balanço de Energia nos Subsistemas (horário), dataset balanco_energia_subsistema_ho",
+  "portal": "https://dados.ons.org.br",
+  "tabela_bigquery": "ons-energy-pipeline.dbt_dev.mart_ons__monthly_generation_by_source",
+  "query": "SELECT subsystem_code, subsystem_name, is_national_aggregate, FORMAT_DATE('%Y-%m-%d', reference_month) AS reference_month, hours_count, hours_with_null_generation, hydro_gwh, thermal_gwh, wind_gwh, solar_gwh, load_gwh, total_generation_gwh FROM `ons-energy-pipeline.dbt_dev.mart_ons__monthly_generation_by_source` ORDER BY reference_month, subsystem_code",
+  "extraido_em_utc": "2026-11-12T20:32:28+00:00",
+  "linhas": 715,
+  "mes_inicial": "2015-01",
+  "mes_final": "2026-11",
+  "horas_nulas_aceitas": false,
+  "horas_nulas_linha_sin": 4560,
+  "sha256_parquet": "6a3c47716eb0623d2d03789baab8d9760aefef25a504d05864b05ff9f279e8d8"
+}
