@@ -1,0 +1,12 @@
+# Dados de desenvolvimento (sintéticos). Nunca versionar nem publicar.
+data/dev/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Credenciais
+.env
+*-key.json

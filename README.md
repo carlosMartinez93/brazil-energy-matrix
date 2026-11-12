@@ -77,11 +77,14 @@ pip install -r requirements.txt
 
 ### 2. Collect data
 
+Data comes from ONS open data ("Balanço de Energia nos Subsistemas", hourly), loaded into BigQuery and aggregated to monthly GWh by the companion project [ons-energy-pipeline](https://github.com/carlosMartinez93/ons-energy-pipeline).
+
 ```bash
+gcloud auth application-default login
 python src/ingestao.py
 ```
 
-> **Note:** If the ONS API is unavailable, the script automatically generates realistic synthetic data for development.
+> **Note:** There is no synthetic fallback. If BigQuery or the source table is unavailable, `src/ingestao.py` stops with an error. `python src/ingestao.py --synthetic` writes random development data to `data/dev/` (file suffix `__SYNTHETIC`); the dashboard never reads it.
 
 ### 3. Transform and process
 
@@ -113,15 +116,7 @@ Access: [http://localhost:8050](http://localhost:8050)
 
 ## 💡 Key Findings
 
-1. **Solar energy was the fastest-growing source**: over 1,000% expansion between 2015 and 2024, driven by the falling cost of photovoltaic panels.
-
-2. **Wind already surpasses thermal power** in matrix share — a crossover that occurred around 2021.
-
-3. **Brazil maintains over 80% renewable generation**, a world-leading position that places the country in a favorable spot on the global ESG agenda.
-
-4. **Hydro seasonality is critical**: drought years (such as 2021) force thermal plants into operation, raising energy costs and CO₂ emissions.
-
-5. **Northeast and Center-West lead** the expansion of new renewables — solar and wind —, while the South concentrates biomass.
+Differences are reported, not corrected. A gap can come from scope (SIN vs. SEB), source (ONS vs. CCEE data) and method (MMGD is an ONS estimate). The scope column records what the official source states; no further explanation is asserted. Only 2024 is reconciled externally; other years have no verified official reference yet.
 
 ---
 

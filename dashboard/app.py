@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
+from src.proveniencia import ORIGEM_REAL, ler_manifest
+
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -41,8 +43,6 @@ CORES_FONTE = {
     "Eólica":       "#3ecf8e",
     "Solar":        "#f5c542",
     "Termelétrica": "#ff6b6b",
-    "Nuclear":      "#c084fc",
-    "Biomassa":     "#fb923c",
 }
 
 NOMES_MESES = {
@@ -72,64 +72,25 @@ LAYOUT_BASE = dict(
 PROC_DIR = Path(__file__).parent.parent / "data" / "processed"
 
 
-def _gerar_dados_demo() -> pd.DataFrame:
-    np.random.seed(42)
-    fontes_config = {
-        "Hidráulica":   (29000, -0.012, "Renovável",     0.22),
-        "Eólica":       ( 4000,  0.090, "Renovável",     0.18),
-        "Solar":        (  150,  0.170, "Renovável",     0.30),
-        "Termelétrica": ( 6500,  0.008, "Não renovável", 0.08),
-        "Nuclear":      ( 1250,  0.001, "Baixo carbono", 0.02),
-        "Biomassa":     ( 2500,  0.022, "Renovável",     0.14),
-    }
-    rows = []
-    datas = pd.date_range("2015-01-01", "2024-12-01", freq="MS")
-    for data in datas:
-        anos_dec = (data.year - 2015) + data.month / 12
-        for fonte, (base, taxa, tipo, saz_amp) in fontes_config.items():
-            tendencia = base * (1 + taxa) ** anos_dec
-            if fonte == "Solar":
-                saz = 1 + 0.35 * np.cos(2 * np.pi * (data.month - 1) / 12)
-            else:
-                saz = 1 + saz_amp * np.sin(2 * np.pi * (data.month - 3) / 12)
-            gwh = round(float(max(0, tendencia * saz * np.random.normal(1, 0.025))), 1)
-            rows.append({
-                "data":       data,
-                "ano":        int(data.year),
-                "mes":        int(data.month),
-                "nome_mes":   NOMES_MESES[data.month],
-                "fonte":      fonte,
-                "tipo_fonte": tipo,
-                "renovavel":  tipo == "Renovável",
-                "geracao_gwh": gwh,
-            })
-    df = pd.DataFrame(rows)
-    tot = df.groupby(["ano", "mes"])["geracao_gwh"].transform("sum")
-    df["participacao_pct"] = (df["geracao_gwh"] / tot * 100).round(2)
-    return df
+def carregar_dados():
+    """
+    Lê SOMENTE data/processed/geracao_completa.parquet, e só se o manifest ao lado disser
+    que a origem é dado real (ons_bigquery). Não existe gerador de demonstração nem fallback:
+    sem dado real e rastreável, o app não sobe.
+    """
+    arquivo = PROC_DIR / "geracao_completa.parquet"
+    if not arquivo.exists():
+        raise FileNotFoundError(
+            f"{arquivo} não existe. Rode: python src/ingestao.py && python src/transformacao.py"
+        )
+    manifest = ler_manifest(arquivo, ORIGEM_REAL)  # levanta ProvenienciaError se não for dado real
+    df = pd.read_parquet(arquivo)
+    df["mes"] = df["mes"].astype(int)
+    df["ano"] = df["ano"].astype(int)
+    return df, manifest
 
 
-def carregar_dados() -> pd.DataFrame:
-    for nome in ["geracao_completa.parquet", "geracao_sintetica.parquet"]:
-        p = PROC_DIR / nome
-        if p.exists():
-            df = pd.read_parquet(p)
-            # Normaliza nomes de colunas para o padrão do dashboard
-            if "geracao_mwmed" in df.columns and "geracao_gwh" not in df.columns:
-                df["geracao_gwh"] = (df["geracao_mwmed"] * 24 * 30 / 1000).round(1)
-            if "geracao_gwh" not in df.columns:
-                continue
-            if "mes" not in df.columns and "data" in df.columns:
-                df["data"] = pd.to_datetime(df["data"])
-                df["mes"] = df["data"].dt.month
-                df["ano"] = df["data"].dt.year
-            df["mes"] = df["mes"].astype(int)
-            df["ano"] = df["ano"].astype(int)
-            return df
-    return _gerar_dados_demo()
-
-
-df_raw      = carregar_dados()
+df_raw, MANIFEST = carregar_dados()
 anos_disp   = [int(a) for a in sorted(df_raw["ano"].unique())]
 meses_disp  = list(range(1, 13))
 fontes_disp = sorted(df_raw["fonte"].unique())
@@ -187,7 +148,8 @@ app.layout = html.Div(
                 html.Div([
                     html.H1("Matriz Energética Brasileira",
                             style={"margin": 0, "fontSize": "22px", "fontWeight": "600", "color": TEXT_PRI}),
-                    html.P("Geração por fonte · 2015–2024 · Fontes: ONS & ANEEL",
+                    html.P(f"Geração mensal por fonte · SIN · {min(anos_disp)}–{max(anos_disp)} · "
+                           f"Fonte: ONS, Balanço de Energia nos Subsistemas · extraído em {MANIFEST['extraido_em_utc'][:10]}",
                            style={"margin": 0, "fontSize": "13px", "color": TEXT_SEC}),
                 ]),
             ]),
@@ -269,7 +231,7 @@ app.layout = html.Div(
                 ], md=7),
                 dbc.Col([
                     html.Div(style=CARD_STYLE, children=[
-                        html.P("Mix renovável (%)", style=CARD_HDR),
+                        html.P("Hidro + eólica + solar (% da geração)", style=CARD_HDR),
                         dcc.Graph(id="grafico-renovavel", style={"height": "300px"},
                                   config={"displayModeBar": False}),
                     ])
@@ -354,15 +316,15 @@ def atualizar(intervalo_anos, meses_sel, fontes_sel):
     tot_ult  = float(df_ult["geracao_gwh"].sum())
     tot_ini  = float(df_pri["geracao_gwh"].sum())
     pct_ren  = float(df_ult[df_ult["renovavel"]]["geracao_gwh"].sum() / tot_ult * 100)
-    cr_sol   = float(_yoy(df_an, "Solar",  ano_ini, ult_ano))
-    cr_eol   = float(_yoy(df_an, "Eólica", ano_ini, ult_ano))
+    var_sol  = _variacao(df_an, "Solar",  ano_ini, ult_ano)
+    var_eol  = _variacao(df_an, "Eólica", ano_ini, ult_ano)
 
     # KPIs
     kpis = [
-        _kpi("Geração Total",  f"{tot_ult/1000:.0f} TWh", f"Ano {ult_ano}", "#4a9eff"),
-        _kpi("Mix Renovável",  f"{pct_ren:.1f}%",         f"Ano {ult_ano}", "#3ecf8e"),
-        _kpi("Solar ↑",       f"+{cr_sol:.0f}%",         f"{ano_ini}→{ult_ano}", "#f5c542"),
-        _kpi("Eólica ↑",      f"+{cr_eol:.0f}%",         f"{ano_ini}→{ult_ano}", "#c084fc"),
+        _kpi("Geração Total (SIN)",  f"{tot_ult/1000:.0f} TWh", f"Ano {ult_ano}", "#4a9eff"),
+        _kpi("Hidro + Eólica + Solar", f"{pct_ren:.1f}%",       f"% da geração, ano {ult_ano}", "#3ecf8e"),
+        _kpi("Solar",  _fmt_var(var_sol), f"{ano_ini}→{ult_ano}", "#f5c542"),
+        _kpi("Eólica", _fmt_var(var_eol), f"{ano_ini}→{ult_ano}", "#c084fc"),
     ]
 
     # Evolução
@@ -444,14 +406,27 @@ def atualizar(intervalo_anos, meses_sel, fontes_sel):
     pct_lider   = float(df_ult[df_ult["fonte"] == fonte_lider]["participacao_pct"].values[0])
     variacao    = (tot_ult / tot_ini - 1) * 100 if tot_ini > 0 else 0.0
 
-    insights = html.Ul([
-        html.Li(f"{fonte_lider} lidera a matriz em {ult_ano} com {pct_lider:.1f}% da geração."),
-        html.Li(f"Energia solar cresceu {cr_sol:.0f}% entre {ano_ini} e {ult_ano} — maior expansão do período."),
-        html.Li(f"Energia eólica cresceu {cr_eol:.0f}% no mesmo período, consolidando o Nordeste como polo renovável."),
-        html.Li(f"Mix renovável atingiu {pct_ren:.1f}% em {ult_ano}, mantendo o Brasil entre os líderes mundiais."),
-        html.Li(f"Geração total variou {variacao:+.0f}% entre {ano_ini} e {ult_ano} "
-                f"({tot_ini/1000:.0f} → {tot_ult/1000:.0f} TWh)."),
-    ], style={"paddingLeft": "20px", "lineHeight": "2"})
+    itens = [html.Li(f"{fonte_lider} lidera a geração em {ult_ano} com {pct_lider:.1f}% do total.")]
+    for nome, v in (("Solar", var_sol), ("Eólica", var_eol)):
+        if v is not None:
+            itens.append(html.Li(
+                f"{nome}: {v['pct']:+.0f}% entre {ano_ini} e {ult_ano} "
+                f"({v['ini']:,.0f} → {v['fim']:,.0f} GWh)."
+            ))
+    itens.append(html.Li(f"Hidro + eólica + solar somaram {pct_ren:.1f}% da geração em {ult_ano}."))
+    if ult_ano > ano_ini:
+        itens.append(html.Li(
+            f"Geração total variou {variacao:+.0f}% entre {ano_ini} e {ult_ano} "
+            f"({tot_ini/1000:.0f} → {tot_ult/1000:.0f} TWh)."
+        ))
+    insights = html.Div([
+        html.Ul(itens, style={"paddingLeft": "20px", "lineHeight": "2"}),
+        html.P(
+            "Escopo: dado operativo do SIN publicado pela ONS; pode diferir de balanços nacionais. "
+            "Biomassa e nuclear estão dentro de Termelétrica. Reconciliação em docs/validacao.md.",
+            style={"color": TEXT_SEC, "fontSize": "12px", "margin": "8px 0 0"},
+        ),
+    ])
 
     return kpis, fig_ev, fig_pz, fig_ar, fig_ren, fig_saz, insights
 
@@ -488,10 +463,19 @@ def _kpi(titulo, valor, sub, cor):
     )
 
 
-def _yoy(df, fonte, ano_ini, ano_fim):
-    vi = df[(df["fonte"] == fonte) & (df["ano"] == ano_ini)]["geracao_gwh"].sum()
-    vf = df[(df["fonte"] == fonte) & (df["ano"] == ano_fim)]["geracao_gwh"].sum()
-    return float((vf / vi - 1) * 100) if vi > 0 else 0.0
+def _variacao(df, fonte, ano_ini, ano_fim):
+    """Variação % da fonte entre dois anos. None quando não há base de comparação."""
+    if ano_fim <= ano_ini:
+        return None
+    ini = float(df[(df["fonte"] == fonte) & (df["ano"] == ano_ini)]["geracao_gwh"].sum())
+    fim = float(df[(df["fonte"] == fonte) & (df["ano"] == ano_fim)]["geracao_gwh"].sum())
+    if ini <= 0:
+        return None
+    return {"pct": (fim / ini - 1) * 100, "ini": ini, "fim": fim}
+
+
+def _fmt_var(v):
+    return "n/d" if v is None else f"{v['pct']:+.0f}%"
 
 
 if __name__ == "__main__":
