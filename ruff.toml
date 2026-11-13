@@ -1,0 +1,7 @@
+line-length = 140
+target-version = "py310"
+extend-exclude = ["data", "docs"]
+
+[lint]
+# Só o essencial: erros de sintaxe/nome (F), estilo básico (E, W) e ordenação de imports (I).
+select = ["E", "F", "W", "I"]

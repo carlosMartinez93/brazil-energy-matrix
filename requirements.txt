@@ -1,10 +1,16 @@
-pandas>=2.0.0
-numpy>=1.24.0
-plotly>=5.15.0
-dash>=2.14.0
-dash-bootstrap-components>=1.5.0
-requests>=2.31.0
-pyarrow>=12.0.0
-fastparquet>=2023.0.0
-openpyxl>=3.1.0
-python-dotenv>=1.0.0
+# Versões fixadas = as que rodaram este projeto de ponta a ponta (ingestão -> transformação -> dashboard).
+# Só entra aqui o que o código importa.
+
+# Transformação e dados
+pandas==3.0.5
+numpy==2.5.3
+pyarrow==26.0.1
+
+# Dashboard
+dash==4.5.0
+dash-bootstrap-components==2.0.4
+plotly==7.1.0
+
+# Ingestão (BigQuery) — só necessário para rodar src/ingestao.py
+google-cloud-bigquery==3.47.0
+db-dtypes==1.9.0

@@ -5,23 +5,24 @@ Dashboard interativo da Matriz Energética Brasileira.
 Dark mode · Filtros por ano, mês e fonte · Plotly Dash
 
 Execução:
-    pip install dash plotly pandas pyarrow dash-bootstrap-components
+    pip install -r requirements.txt
     python dashboard/app.py
     Acesse: http://localhost:8050
 """
 
 import sys
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.proveniencia import ORIGEM_REAL, ler_manifest
+import dash_bootstrap_components as dbc  # noqa: E402
+import pandas as pd  # noqa: E402
+import plotly.express as px  # noqa: E402
+import plotly.graph_objects as go  # noqa: E402
+from dash import Dash, Input, Output, dcc, html  # noqa: E402
 
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from dash import Dash, dcc, html, Input, Output
-import dash_bootstrap_components as dbc
+from src.proveniencia import ORIGEM_REAL, ler_manifest  # noqa: E402
+from src.regimes import ANO_TRANSICAO, TEXTO_QUEBRA_CURTO, janela_comparavel  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Paleta dark mode
@@ -261,7 +262,7 @@ app.layout = html.Div(
             ], className="mb-4 g-3"),
 
             html.P(
-                "Carlos Henrique · Analytics & ML Engineer · github.com/carlosMartinez93/brazil-energy-matrix",
+                "Carlos Henrique · Analytics Engineer · github.com/carlosMartinez93/brazil-energy-matrix",
                 style={"textAlign": "center", "color": TEXT_SEC, "fontSize": "12px", "marginTop": "8px"},
             ),
         ]),
@@ -312,19 +313,32 @@ def atualizar(intervalo_anos, meses_sel, fontes_sel):
 
     ult_ano  = int(df_an["ano"].max())
     df_ult   = df_an[df_an["ano"] == ult_ano]
-    df_pri   = df_an[df_an["ano"] == ano_ini]
     tot_ult  = float(df_ult["geracao_gwh"].sum())
-    tot_ini  = float(df_pri["geracao_gwh"].sum())
-    pct_ren  = float(df_ult[df_ult["renovavel"]]["geracao_gwh"].sum() / tot_ult * 100)
-    var_sol  = _variacao(df_an, "Solar",  ano_ini, ult_ano)
-    var_eol  = _variacao(df_an, "Eólica", ano_ini, ult_ano)
+    pct_ren  = _pct_hes(df_an, ult_ano)
+
+    # Os 4 cards comparam os MESMOS dois anos: a maior janela válida para todos ao mesmo tempo.
+    # Solar, total e participações são afetados pela quebra de 2023 (src/regimes.py), então a
+    # janela comum é a deles; a Eólica só acompanha para os cards ficarem na mesma régua.
+    janela   = janela_comparavel(ano_ini, ult_ano, "Solar")
+    var_sol  = _delta(df_an, "Solar", janela)
+    var_eol  = _delta(df_an, "Eólica", janela)
+    var_tot  = _delta(df_an, None, janela)
+    pct_ren_ini = _pct_hes(df_an, janela[0]) if janela else None
+    # Nos insights cada fonte usa a sua maior janela válida (a Eólica mantém o histórico longo).
+    var_eol_longo = _variacao(df_an, "Eólica", ano_ini, ult_ano)
 
     # KPIs
+    sub_tot = f"Ano {ult_ano}"
+    sub_ren = f"% da geração, ano {ult_ano}"
+    if var_tot is not None:
+        sub_tot = f"vs {var_tot['ini']/1000:.0f} TWh em {var_tot['ano_ini']} ({var_tot['pct']:+.1f}%)"
+    if pct_ren_ini is not None:
+        sub_ren = f"vs {pct_ren_ini:.1f}% em {janela[0]}"
     kpis = [
-        _kpi("Geração Total (SIN)",  f"{tot_ult/1000:.0f} TWh", f"Ano {ult_ano}", "#4a9eff"),
-        _kpi("Hidro + Eólica + Solar", f"{pct_ren:.1f}%",       f"% da geração, ano {ult_ano}", "#3ecf8e"),
-        _kpi("Solar",  _fmt_var(var_sol), f"{ano_ini}→{ult_ano}", "#f5c542"),
-        _kpi("Eólica", _fmt_var(var_eol), f"{ano_ini}→{ult_ano}", "#c084fc"),
+        _kpi("Geração Total (SIN)",  f"{tot_ult/1000:.0f} TWh", sub_tot, "#4a9eff"),
+        _kpi("Hidro + Eólica + Solar", f"{pct_ren:.1f}%",       sub_ren, "#3ecf8e"),
+        _kpi("Solar",  _fmt_var(var_sol), _sub_var(var_sol, ano_ini, ult_ano, janela), "#f5c542"),
+        _kpi("Eólica", _fmt_var(var_eol), _sub_var(var_eol, ano_ini, ult_ano, janela), "#c084fc"),
     ]
 
     # Evolução
@@ -335,6 +349,7 @@ def atualizar(intervalo_anos, meses_sel, fontes_sel):
     )
     fig_ev.update_traces(line=dict(width=2.5), marker=dict(size=6))
     fig_ev.update_layout(**LAYOUT_BASE)
+    _eixo_ano(fig_ev, ano_ini, ano_fim)
 
     # Donut
     df_pz = df_an.groupby("fonte")["geracao_gwh"].sum().reset_index()
@@ -362,12 +377,13 @@ def atualizar(intervalo_anos, meses_sel, fontes_sel):
     )
     fig_ar.update_traces(line=dict(width=0.5))
     fig_ar.update_layout(**LAYOUT_BASE)
+    _eixo_ano(fig_ar, ano_ini, ano_fim)
 
     # Mix renovável
     mix = df_an.groupby(["ano", "renovavel"])["geracao_gwh"].sum().reset_index()
     tot_mix = mix.groupby("ano")["geracao_gwh"].transform("sum")
     mix["pct"] = (mix["geracao_gwh"] / tot_mix * 100).round(1)
-    ren = mix[mix["renovavel"] == True].sort_values("ano")
+    ren = mix[mix["renovavel"]].sort_values("ano")
     fig_ren = go.Figure()
     fig_ren.add_trace(go.Scatter(
         x=ren["ano"].tolist(), y=ren["pct"].tolist(),
@@ -387,6 +403,7 @@ def atualizar(intervalo_anos, meses_sel, fontes_sel):
     layout_ren["yaxis"] = dict(range=[0, 108], ticksuffix="%", gridcolor=GRID_COL, tickfont=dict(color=TEXT_SEC))
     layout_ren["showlegend"] = False
     fig_ren.update_layout(**layout_ren)
+    _eixo_ano(fig_ren, ano_ini, ano_fim)
 
     # Sazonalidade — deriva nome_mes aqui para funcionar com qualquer fonte de dados
     saz = df.groupby(["mes", "fonte"])["geracao_gwh"].mean().reset_index().sort_values("mes")
@@ -404,28 +421,29 @@ def atualizar(intervalo_anos, meses_sel, fontes_sel):
     # Insights
     fonte_lider = str(df_ult.loc[df_ult["geracao_gwh"].idxmax(), "fonte"])
     pct_lider   = float(df_ult[df_ult["fonte"] == fonte_lider]["participacao_pct"].values[0])
-    variacao    = (tot_ult / tot_ini - 1) * 100 if tot_ini > 0 else 0.0
 
     itens = [html.Li(f"{fonte_lider} lidera a geração em {ult_ano} com {pct_lider:.1f}% do total.")]
-    for nome, v in (("Solar", var_sol), ("Eólica", var_eol)):
+    for nome, v in (("Solar", var_sol), ("Eólica", var_eol_longo)):
         if v is not None:
             itens.append(html.Li(
-                f"{nome}: {v['pct']:+.0f}% entre {ano_ini} e {ult_ano} "
+                f"{nome}: {_fmt_pct(v)} entre {v['ano_ini']} e {v['ano_fim']} "
                 f"({v['ini']:,.0f} → {v['fim']:,.0f} GWh)."
             ))
     itens.append(html.Li(f"Hidro + eólica + solar somaram {pct_ren:.1f}% da geração em {ult_ano}."))
-    if ult_ano > ano_ini:
+    if var_tot is not None:
         itens.append(html.Li(
-            f"Geração total variou {variacao:+.0f}% entre {ano_ini} e {ult_ano} "
-            f"({tot_ini/1000:.0f} → {tot_ult/1000:.0f} TWh)."
+            f"Geração total variou {var_tot['pct']:+.0f}% entre {var_tot['ano_ini']} e {var_tot['ano_fim']} "
+            f"({var_tot['ini']/1000:.0f} → {var_tot['fim']/1000:.0f} TWh)."
         ))
+    nota = (
+        "Escopo: dado operativo do SIN publicado pela ONS; pode diferir de balanços nacionais. "
+        "Biomassa e nuclear estão dentro de Termelétrica. Reconciliação em docs/validacao.md."
+    )
+    if ano_ini <= ANO_TRANSICAO <= ano_fim:
+        nota += " " + TEXTO_QUEBRA_CURTO
     insights = html.Div([
         html.Ul(itens, style={"paddingLeft": "20px", "lineHeight": "2"}),
-        html.P(
-            "Escopo: dado operativo do SIN publicado pela ONS; pode diferir de balanços nacionais. "
-            "Biomassa e nuclear estão dentro de Termelétrica. Reconciliação em docs/validacao.md.",
-            style={"color": TEXT_SEC, "fontSize": "12px", "margin": "8px 0 0"},
-        ),
+        html.P(nota, style={"color": TEXT_SEC, "fontSize": "12px", "margin": "8px 0 0"}),
     ])
 
     return kpis, fig_ev, fig_pz, fig_ar, fig_ren, fig_saz, insights
@@ -463,19 +481,66 @@ def _kpi(titulo, valor, sub, cor):
     )
 
 
-def _variacao(df, fonte, ano_ini, ano_fim):
-    """Variação % da fonte entre dois anos. None quando não há base de comparação."""
-    if ano_fim <= ano_ini:
+def _delta(df, fonte, janela):
+    """Variação % entre os dois anos da janela (fonte=None -> geração total). None sem janela ou sem base."""
+    if janela is None:
         return None
-    ini = float(df[(df["fonte"] == fonte) & (df["ano"] == ano_ini)]["geracao_gwh"].sum())
-    fim = float(df[(df["fonte"] == fonte) & (df["ano"] == ano_fim)]["geracao_gwh"].sum())
+    a, b = janela
+    base = df if fonte is None else df[df["fonte"] == fonte]
+    ini = float(base[base["ano"] == a]["geracao_gwh"].sum())
+    fim = float(base[base["ano"] == b]["geracao_gwh"].sum())
     if ini <= 0:
         return None
-    return {"pct": (fim / ini - 1) * 100, "ini": ini, "fim": fim}
+    return {"pct": (fim / ini - 1) * 100, "ini": ini, "fim": fim, "ano_ini": a, "ano_fim": b}
+
+
+def _variacao(df, fonte, ano_ini, ano_fim):
+    """
+    Variação % de uma fonte (fonte=None -> total) na maior janela válida dentro de [ano_ini, ano_fim]
+    (src/regimes.py: nunca cruza a quebra de 2023). None quando não há janela válida.
+    """
+    return _delta(df, fonte, janela_comparavel(ano_ini, ano_fim, fonte))
+
+
+def _pct_hes(df, ano):
+    """% da geração do ano vinda de hidro + eólica + solar (flag renovavel)."""
+    d = df[df["ano"] == ano]
+    total = float(d["geracao_gwh"].sum())
+    return float(d[d["renovavel"]]["geracao_gwh"].sum() / total * 100) if total > 0 else 0.0
+
+
+def _fmt_pct(v):
+    """+25%; acima de +1000% (base minúscula) mostra o múltiplo, ex.: ×711, que é o mesmo fato sem o número absurdo."""
+    if v["pct"] >= 1000:
+        return f"×{v['fim'] / v['ini']:,.0f}"
+    return f"{v['pct']:+.0f}%"
 
 
 def _fmt_var(v):
-    return "n/d" if v is None else f"{v['pct']:+.0f}%"
+    return "n/d" if v is None else _fmt_pct(v)
+
+
+def _sub_var(v, ano_ini, ano_fim, janela):
+    """Legenda do KPI: anos realmente comparados, ou o motivo de não haver número."""
+    if v is not None:
+        return f"{v['ano_ini']}→{v['ano_fim']}"
+    if ano_fim <= ano_ini:
+        return "selecione mais de um ano"
+    if janela is None:
+        return "sem janela comparável (quebra em 2023)"
+    return "sem dados nos filtros"
+
+
+def _eixo_ano(fig, ano_ini, ano_fim):
+    """Eixo X com anos inteiros (sem '2,022.5') e marca da transição de 2023, se estiver no intervalo."""
+    fig.update_xaxes(dtick=1, tickformat="d")
+    if ano_ini <= ANO_TRANSICAO <= ano_fim and ano_fim > ano_ini:
+        fig.add_vline(x=ANO_TRANSICAO, line_dash="dot", line_color=TEXT_SEC, line_width=1)
+        fig.add_annotation(
+            x=ANO_TRANSICAO, y=1, yref="paper", xanchor="left", yanchor="top", showarrow=False,
+            text="2023: quebra na série solar", font=dict(size=10, color=TEXT_PRI),
+            bgcolor="rgba(26,29,39,0.85)",
+        )
 
 
 if __name__ == "__main__":

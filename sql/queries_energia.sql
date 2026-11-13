@@ -27,6 +27,7 @@ ORDER BY ano, generation_gwh DESC;
 
 -- ============================================================
 -- 2. HYDRO + WIND + SOLAR SHARE (% of generation - biomass and nuclear sit inside thermal in the ONS dataset)
+-- Reading note: shares before and after the 2023 solar series break are not directly comparable.
 -- ============================================================
 WITH total_by_year AS (
     SELECT ano, SUM(geracao_total_gwh) AS total_gwh
@@ -53,6 +54,9 @@ ORDER BY ano;
 
 -- ============================================================
 -- 3. ANNUAL GROWTH (YoY) BY SOURCE
+-- Series break: the ONS solar series jumps in May 2023 (likely distributed generation
+-- being added - cause not confirmed). Solar YoY for 2023 and 2024 compares across the break,
+-- so it is returned as NULL instead of a number. See src/regimes.py.
 -- ============================================================
 WITH annual_generation AS (
     SELECT ano, fonte, SUM(geracao_total_gwh) AS gwh
@@ -72,7 +76,10 @@ SELECT
     fonte,
     ROUND(gwh, 0)                                                    AS generation_gwh,
     ROUND(gwh_prev_year, 0)                                          AS generation_gwh_prev_year,
-    ROUND((gwh - gwh_prev_year) * 100.0 / NULLIF(gwh_prev_year, 0), 1) AS yoy_growth_pct
+    CASE
+        WHEN fonte = 'Solar' AND ano IN (2023, 2024) THEN NULL
+        ELSE ROUND((gwh - gwh_prev_year) * 100.0 / NULLIF(gwh_prev_year, 0), 1)
+    END                                                              AS yoy_growth_pct
 FROM with_lag
 WHERE gwh_prev_year IS NOT NULL
 ORDER BY ano, yoy_growth_pct DESC;
@@ -120,6 +127,7 @@ ORDER BY ranking;
 
 -- ============================================================
 -- 6. HYDRO vs NEW RENEWABLES — Trend reversal
+-- Reading note: "new renewables" includes solar, so the level crosses the 2023 series break.
 -- ============================================================
 WITH groups AS (
     SELECT
