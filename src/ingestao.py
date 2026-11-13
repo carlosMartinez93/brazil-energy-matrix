@@ -68,8 +68,8 @@ class IngestaoError(RuntimeError):
 
 def consultar_bigquery(projeto: str, tabela: str) -> pd.DataFrame:
     try:
-        from google.cloud import bigquery
         from google.auth.exceptions import DefaultCredentialsError
+        from google.cloud import bigquery
     except ImportError as exc:
         raise IngestaoError(
             "Biblioteca do BigQuery ausente. Rode: pip install google-cloud-bigquery"

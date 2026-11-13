@@ -39,11 +39,30 @@
     "desvio_abs_max_pct": 0.5098,
     "desvio_abs_medio_pct": 0.0037636363636363635
   },
+  "quebra_de_serie": {
+    "fonte": "Solar",
+    "mes": "2023-05",
+    "variacao_mm_pct": 140.8,
+    "razao_mes_sobre_anterior_por_ano": {
+      "2016": 1.26,
+      "2017": 4.96,
+      "2018": 1.17,
+      "2019": 1.03,
+      "2020": 1.01,
+      "2021": 1.02,
+      "2022": 0.97,
+      "2023": 2.41,
+      "2024": 0.97,
+      "2025": 0.95
+    },
+    "hipotese_causa": "inclusão de estimativa de geração distribuída (MMGD) pela ONS; NÃO confirmada no dicionário do dataset",
+    "regra": "Quebra na série solar a partir de mai/2023 (possível inclusão de geração distribuída pela ONS; hipótese não confirmada). Variações que cruzam 2023 não são comparáveis."
+  },
   "definicoes": {
     "geracao_gwh": "soma das leituras horárias em MWmed (= MWh) do mês, dividida por 1000",
     "total_nacional": "soma dos 4 subsistemas (N, NE, SE, S); a linha SIN da ONS é usada só na reconciliação",
     "hidro_eolica_solar": "hidráulica + eólica + solar; biomassa e nuclear estão dentro de 'Termelétrica' no dataset da ONS"
   },
-  "transformado_em_utc": "2026-11-12T21:07:36+00:00",
-  "sha256_parquet": "b0c95fd4564d81e963ec109875ce2a98f0d48619e732c76428c665c196e3f369"
+  "transformado_em_utc": "2026-11-12T21:23:42+00:00",
+  "sha256_parquet": "f14512c05599f505776821a7cfc3dd02c8416a9296ce732c9e7e5e196a4926d9"
 }

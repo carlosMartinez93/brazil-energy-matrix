@@ -1,54 +1,59 @@
-# ⚡ Brazilian Energy Matrix — Analysis and Interactive Dashboard
+# ⚡ Brazilian Energy Matrix — Dashboard on ONS Open Data
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
-![Plotly Dash](https://img.shields.io/badge/Plotly_Dash-2.14+-purple?logo=plotly)
-![SQL](https://img.shields.io/badge/SQL-PostgreSQL-blue?logo=postgresql)
-![Status](https://img.shields.io/badge/Status-Active-green)
-![Sources](https://img.shields.io/badge/Data-ONS_%7C_ANEEL-orange)
+![CI](https://github.com/carlosMartinez93/brazil-energy-matrix/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
+![Plotly Dash](https://img.shields.io/badge/Plotly_Dash-4.5-purple?logo=plotly)
+![Data](https://img.shields.io/badge/Data-ONS_open_data-orange)
 
 ## 📌 Overview
 
-Interactive dashboard that analyzes the evolution of Brazil's electricity generation matrix between **2015 and 2024**, focusing on the energy transition and the growth of renewable sources — especially solar and wind.
+Interactive dashboard on Brazil's electricity generation by source (hydro, thermal, wind, solar), built from the **hourly** "Balanço de Energia nos Subsistemas" dataset published by ONS (the national grid operator). It covers the **complete years 2016–2025**.
 
-The project answers questions such as:
-- How has each source's share in the matrix changed over the last decade?
-- Have solar and wind already surpassed any traditional source?
-- What is the renewable percentage of the matrix in each year?
-- How does seasonality (dry/rainy season) affect hydro generation?
+This is a portfolio project, not a production system. It was built to show a traceable data path (public source → warehouse → tested transformations → dashboard) and to be honest about what the data can and cannot support. The [Limitations](#️-limitations) section is part of the project, not a footnote.
+
+![Dashboard overview](docs/img/dashboard-overview.png)
+![Dashboard detail](docs/img/dashboard-detail.png)
+
+---
+
+## 🔗 Where the data comes from
+
+```
+ONS open data (hourly, S3)
+   └─► ons-energy-pipeline  (Python load → BigQuery raw → dbt staging → dbt mart, monthly GWh)
+          └─► src/ingestao.py        → data/raw/ons_geracao_mensal.parquet  (+ manifest with SHA-256)
+                 └─► src/transformacao.py → data/processed/*               (+ manifest)
+                        └─► dashboard/app.py
+```
+
+The warehouse side lives in the companion repo [ons-energy-pipeline](https://github.com/carlosMartinez93/ons-energy-pipeline), which loads the same ONS dataset into BigQuery and models it with dbt (with tests and CI). This repo starts from its monthly mart.
+
+Every data file has a `.manifest.json` next to it recording where it came from. **The dashboard refuses to start** on data without a manifest of origin `ons_bigquery`, and `transformacao.py` refuses a raw file whose hash no longer matches its manifest. There is no demo-data fallback: `python src/ingestao.py --synthetic` writes random development data to `data/dev/` (git-ignored), and the dashboard never reads it.
 
 ---
 
 ## 🗂️ Project Structure
 
 ```
-energia-brasil/
+brazil-energy-matrix/
 ├── data/
-│   ├── raw/                  # Raw data (ONS, ANEEL)
-│   └── processed/            # Cleaned data ready for analysis
+│   ├── raw/             # monthly generation by subsystem, as extracted (+ manifest)
+│   ├── processed/       # outputs of transformacao.py (+ manifest)
+│   └── reference/       # official figures used to cross-check the data
 ├── src/
-│   ├── ingestao.py           # Data collection via public APIs
-│   └── transformacao.py      # Cleaning, enrichment and aggregations
-├── dashboard/
-│   └── app.py                # Plotly Dash dashboard
-├── sql/
-│   └── queries_energia.sql   # Annotated SQL analyses
-├── docs/
-│   └── arquitetura.png       # Pipeline diagram
-├── requirements.txt
-└── README.md
+│   ├── ingestao.py      # BigQuery → data/raw (blocks on null hours in the 4 subsystems)
+│   ├── transformacao.py # complete years only, national total, reconciliation, series-break handling
+│   ├── regimes.py       # rule for which year-to-year comparisons are valid
+│   ├── proveniencia.py  # manifests and hash checks
+│   └── validacao.py     # compares the data with the official figure → docs/validacao.md
+├── dashboard/app.py     # Plotly Dash app
+├── sql/queries_energia.sql
+├── tests/               # pytest (logic on small fabricated data + checks on the real files)
+├── docs/                # validacao.md and screenshots
+├── .github/workflows/ci.yml
+├── requirements.txt     # pinned runtime dependencies
+└── requirements-dev.txt # + pytest, ruff
 ```
-
----
-
-## 🔌 Data Sources
-
-| Source | Data | Access |
-|--------|------|--------|
-| **ONS** (National Electric System Operator) | Generation by plant and subsystem | [dados.ons.org.br](https://dados.ons.org.br) |
-| **ANEEL** | Installed capacity — SIGA | [dadosabertos.aneel.gov.br](https://dadosabertos.aneel.gov.br) |
-| **ANEEL** | Distributed generation (solar / mini generation) | [dadosabertos.aneel.gov.br](https://dadosabertos.aneel.gov.br) |
-
-> Open data, free of charge, and regularly updated by the federal government.
 
 ---
 
@@ -56,107 +61,126 @@ energia-brasil/
 
 | Layer | Technology |
 |-------|-----------|
-| Ingestion | Python + Requests + REST API |
-| Transformation | Pandas, NumPy |
-| Storage | Parquet (local) / Azure Blob Storage |
-| SQL Analysis | PostgreSQL / DuckDB |
+| Source / warehouse | ONS open data → BigQuery + dbt (in [ons-energy-pipeline](https://github.com/carlosMartinez93/ons-energy-pipeline)) |
+| Ingestion | Python, `google-cloud-bigquery` |
+| Transformation | pandas, pyarrow (Parquet) |
 | Visualization | Plotly Dash + Bootstrap |
-| Deploy (optional) | Azure Container Apps |
+| SQL | Standard SQL over the processed Parquet files (queries checked in DuckDB) |
+| Quality | pytest, ruff, GitHub Actions |
 
 ---
 
 ## 🚀 How to Run
 
-### 1. Clone and install dependencies
+Python 3.12 is what CI uses. The processed data is committed, so you can open the dashboard without any cloud access.
 
 ```bash
 git clone https://github.com/carlosMartinez93/brazil-energy-matrix.git
 cd brazil-energy-matrix
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+
+python dashboard/app.py            # http://localhost:8050
 ```
 
-### 2. Collect data
-
-Data comes from ONS open data ("Balanço de Energia nos Subsistemas", hourly), loaded into BigQuery and aggregated to monthly GWh by the companion project [ons-energy-pipeline](https://github.com/carlosMartinez93/ons-energy-pipeline).
+**Refreshing the data** (needs Google Cloud access to the BigQuery table built by the companion repo):
 
 ```bash
 gcloud auth application-default login
-python src/ingestao.py
+python src/ingestao.py             # BigQuery → data/raw
+python src/transformacao.py        # data/raw → data/processed
+python src/validacao.py            # re-generates docs/validacao.md
 ```
 
-> **Note:** There is no synthetic fallback. If BigQuery or the source table is unavailable, `src/ingestao.py` stops with an error. `python src/ingestao.py --synthetic` writes random development data to `data/dev/` (file suffix `__SYNTHETIC`); the dashboard never reads it.
-
-### 3. Transform and process
+**Tests and lint:**
 
 ```bash
-python src/transformacao.py
+pip install -r requirements-dev.txt
+ruff check .
+pytest -q
 ```
-
-### 4. Launch the dashboard
-
-```bash
-python dashboard/app.py
-```
-
-Access: [http://localhost:8050](http://localhost:8050)
 
 ---
 
 ## 📊 Dashboard Features
 
-- **Interactive filters** by period (2015–2024) and energy source
-- **4 dynamic KPIs**: total generation, renewable mix, solar and wind growth
-- **Line chart** showing generation evolution by source over time
-- **Pie chart** with composition for the last selected year
-- **Stacked area chart** with percentage share of each source
-- **Renewable mix indicator** with year-over-year percentage
-- **Automatic insights** generated from filtered data
+- **Filters:** period (defaults to the full range), months, and sources.
+- **KPIs:** total generation, Hydro+Wind+Solar share, and Solar / Wind variation. All four cards compare the same two years: the longest window that does not cross the 2023 series break (2024→2025 with the default period). If there is no valid window they show `n/d` and say why. The insights box keeps the long Wind history (2016→2025) with its years written out.
+- **Charts:** generation by source per year, composition of the period, share-of-generation area chart, Hydro+Wind+Solar share, monthly seasonality.
+- **Insights** generated from the filtered data, with the scope caveats attached.
+- A marker at **2023** on the year charts flags the solar series break described below.
 
 ---
 
 ## 💡 Key Findings
 
-Differences are reported, not corrected. A gap can come from scope (SIN vs. SEB), source (ONS vs. CCEE data) and method (MMGD is an ONS estimate). The scope column records what the official source states; no further explanation is asserted. Only 2024 is reconciled externally; other years have no verified official reference yet.
+Computed from the processed files in `data/processed/`, comparing only years inside the same series regime (see Limitations).
+
+| | Finding |
+|---|---|
+| Wind | 30.7 TWh (2016) → 115.4 TWh (2025). |
+| Solar | 2024 → 2025: 73.3 → 91.8 TWh (+25%). Before the break, 2016 → 2022: 0.02 → 12.1 TWh. |
+| Hydro | Largest source in every year; 57.7% of generation in 2025. In 2021 its share dropped to 62.7% (thermal rose to 23.9%). |
+| Hydro + Wind + Solar | 81.5% (2016) → 87.4% (2022), then 87.7% (2024) and 87.2% (2025). |
+| Total generation | 695.0 TWh (2024) → 700.4 TWh (2025), about +0.8%. |
+
+---
+
+## ⚠️ Limitations
+
+- **Break in the solar series (May 2023).** Monthly solar generation jumps by +140.8% from April to May 2023; in every other year the May/April ratio is between 0.95 and 1.26, except 2017 (4.96, the early ramp from a very small base). A likely cause is the ONS starting to include an estimate of distributed generation (MMGD), but I could not confirm that in the dataset documentation, so it is a hypothesis. Consequence: **solar growth, total-generation growth and source shares are only compared inside 2016–2022 or inside 2024–2025.** 2023 is treated as a transition year. Wind does not show the same jump. The evidence is stored in the manifest (`quebra_de_serie`), and a test enforces that no solar year-over-year figure crosses it.
+- **Scope is the operational grid (SIN), not the whole country.** It can differ from national energy balances.
+- **Only four sources.** The ONS dataset separates hydro, thermal, wind and solar. Biomass and nuclear are inside thermal, so the app says "Hydro+Wind+Solar" and not "renewable".
+- **External validation covers one year.** For 2024, the project total is 695.0 TWh against 687.7 TWh in the MME annual bulletin (+1.06%). The cause of the gap is not established, so it is reported and not adjusted. Other years have no verified official reference yet. Details in [docs/validacao.md](docs/validacao.md).
+- **Internal check:** the sum of the 4 subsystems against the national total published by ONS differs by at most 0.51% across 143 months.
+- **Years left out:** 2015 (one day missing for the North subsystem in April 2015) and 2026 (partial year).
+- Not production: no scheduled refresh, no deployment, no forecasting.
 
 ---
 
 ## 🗃️ Included SQL Analyses
 
+`sql/queries_energia.sql` (standard SQL over the Parquet files; all queries run in DuckDB):
+
 - Total generation by source and year with percentage share
-- Evolution of the renewable mix over time
-- Year-over-year (YoY) growth by source
-- Source ranking for the latest available year
-- Hydro vs. new renewables comparison (trend crossover)
-- Monthly seasonality analysis by source
+- Hydro + Wind + Solar share over time
+- Year-over-year growth by source (solar returns `NULL` for 2023 and 2024, see Limitations)
+- Wind and solar highlighted
+- Source ranking for the latest year
+- Hydro vs. new renewables
+- Monthly seasonality by source
 
 ---
 
 ## 📁 Generated Data
 
-| File | Description |
+| File (in `data/processed/`) | Description |
 |------|-------------|
-| `geracao_completa.parquet` | Full monthly base by source and subsystem |
-| `geracao_anual_por_fonte.parquet` | Annual aggregate with % share |
-| `crescimento_solar_eolica.parquet` | Monthly series + YoY variation |
-| `mix_renovavel_anual.csv` | Renewable mix by year (Power BI compatible) |
+| `geracao_completa.parquet` | National monthly generation by source (sum of the 4 subsystems) |
+| `geracao_mensal_subsistema.parquet` | Same, by subsystem |
+| `geracao_anual_por_fonte.parquet` / `.csv` | Annual totals and share by source |
+| `mix_hidro_eolica_solar_anual.parquet` / `.csv` | Hydro+Wind+Solar share by year |
+| `crescimento_solar_eolica.parquet` | Monthly series with YoY variation (empty where it would cross the solar break) |
+| `reconciliacao_sin.parquet` | Sum of subsystems vs. the ONS national total, month by month |
 
 ---
 
 ## 📌 Next Steps
 
-- [ ] Integrate climate data (precipitation) to correlate with hydro variation
-- [ ] Add projections through 2030 based on PNE (National Energy Plan) targets
-- [ ] Deploy on Azure Container Apps with automatic data updates
-- [ ] Power BI version of the dashboard for corporate context
+- [ ] Find official references for more years than 2024 and extend the external check
+- [ ] Confirm the cause of the 2023 solar break with ONS documentation
+- [ ] Investigate the +1.06% gap against the MME figure
+- [ ] Climate data (precipitation) to relate to hydro variation
 
 ---
 
 ## 👤 Author
 
-**Carlos Henrique**  
-Analytics Engineer | ML Engineer  
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)](https://linkedin.com/in/carloshenrique)
-[![GitHub](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/carloshenrique)
+**Carlos Henrique** — Analytics Engineer
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?logo=linkedin)](https://www.linkedin.com/in/carlos-henrique-calvo-martinez-044ab9124/)
+[![GitHub](https://img.shields.io/badge/GitHub-black?logo=github)](https://github.com/carlosMartinez93)
 
 ---
 

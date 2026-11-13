@@ -11,7 +11,9 @@ Regras que o código impõe (e falha se violadas):
     nos 4 subsistemas). Ano parcial é listado no manifest e fica fora, para não distorcer
     totais nem taxas de crescimento;
   - o total nacional é a soma dos 4 subsistemas; o total "SIN" publicado pela ONS entra só
-    como conferência (reconciliacao_sin.parquet).
+    como conferência (reconciliacao_sin.parquet);
+  - a série solar tem uma quebra em mai/2023 (ver regimes.py): a variação YoY que cruza a
+    quebra sai vazia, e o manifest registra a evidência (quebra_de_serie).
 
 Uso:
     python src/transformacao.py
@@ -27,12 +29,24 @@ import pandas as pd
 
 try:
     from src.proveniencia import (
-        ORIGEM_REAL, ORIGEM_SINTETICA, ProvenienciaError, ler_manifest, escrever_manifest, sha256_arquivo,
+        ORIGEM_REAL,
+        ORIGEM_SINTETICA,
+        ProvenienciaError,
+        escrever_manifest,
+        ler_manifest,
+        sha256_arquivo,
     )
+    from src.regimes import MES_QUEBRA, TEXTO_QUEBRA_CURTO, comparacao_valida
 except ImportError:  # execução como script
     from proveniencia import (
-        ORIGEM_REAL, ORIGEM_SINTETICA, ProvenienciaError, ler_manifest, escrever_manifest, sha256_arquivo,
+        ORIGEM_REAL,
+        ORIGEM_SINTETICA,
+        ProvenienciaError,
+        escrever_manifest,
+        ler_manifest,
+        sha256_arquivo,
     )
+    from regimes import MES_QUEBRA, TEXTO_QUEBRA_CURTO, comparacao_valida
 
 RAIZ = Path(__file__).resolve().parent.parent
 ARQ_REAL = RAIZ / "data" / "raw" / "ons_geracao_mensal.parquet"
@@ -160,7 +174,39 @@ def calcular_crescimento(nacional: pd.DataFrame) -> pd.DataFrame:
     mensal = novas.groupby(["ano_mes", "ano", "mes", "fonte"])["geracao_gwh"].sum().reset_index()
     mensal = mensal.sort_values(["fonte", "ano_mes"])
     mensal["variacao_yoy_pct"] = (mensal.groupby("fonte")["geracao_gwh"].pct_change(periods=12) * 100).round(2)
+    # Variação que cruza a quebra de série (ver regimes.py) não é comparável: fica vazia, não zerada.
+    comparavel = [comparacao_valida(int(a) - 1, int(a), f) for a, f in zip(mensal["ano"], mensal["fonte"])]
+    mensal.loc[~pd.Series(comparavel, index=mensal.index), "variacao_yoy_pct"] = float("nan")
     return mensal
+
+
+def evidencia_quebra(nacional: pd.DataFrame) -> dict | None:
+    """
+    Evidência numérica da quebra solar, calculada dos dados (nada digitado à mão):
+    variação m/m da solar no mês da quebra e faixa da razão maio/abril nos demais anos.
+    Retorna None se a série não cobre o mês da quebra.
+    """
+    solar = nacional[nacional["fonte"] == "Solar"].groupby("ano_mes")["geracao_gwh"].sum()
+    ano_q, mes_q = (int(x) for x in MES_QUEBRA.split("-"))
+    ant = f"{ano_q}-{mes_q - 1:02d}"
+    if MES_QUEBRA not in solar.index or ant not in solar.index:
+        return None
+    razoes = {}
+    for ano in sorted(nacional["ano"].unique()):
+        a, b = f"{ano}-{mes_q - 1:02d}", f"{ano}-{mes_q:02d}"
+        if ano != ano_q and a in solar.index and b in solar.index and solar[a] > 0:
+            razoes[int(ano)] = float(solar[b] / solar[a])
+    razoes[ano_q] = float(solar[MES_QUEBRA] / solar[ant])
+    return {
+        "fonte": "Solar",
+        "mes": MES_QUEBRA,
+        "variacao_mm_pct": round((razoes[ano_q] - 1) * 100, 1),
+        # Razão (mês da quebra / mês anterior) em cada ano da série, para comparar com os demais anos.
+        # 2017 também é alto: é a rampa inicial da solar a partir de base muito pequena.
+        "razao_mes_sobre_anterior_por_ano": {str(a): round(r, 2) for a, r in sorted(razoes.items())},
+        "hipotese_causa": "inclusão de estimativa de geração distribuída (MMGD) pela ONS; NÃO confirmada no dicionário do dataset",
+        "regra": TEXTO_QUEBRA_CURTO,
+    }
 
 
 def reconciliar_sin(df: pd.DataFrame) -> pd.DataFrame:
@@ -214,6 +260,7 @@ def transformar(sintetico: bool = False) -> Path:
             "desvio_abs_max_pct": float(recon["diferenca_pct"].abs().max()),
             "desvio_abs_medio_pct": float(recon["diferenca_pct"].abs().mean()),
         },
+        "quebra_de_serie": evidencia_quebra(nacional),
         "definicoes": DEFINICOES,
         "transformado_em_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "sha256_parquet": sha256_arquivo(principal),

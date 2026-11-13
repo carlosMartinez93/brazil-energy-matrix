@@ -10,3 +10,7 @@ venv/
 # Credenciais
 .env
 *-key.json
+
+# Caches de teste/lint
+.pytest_cache/
+.ruff_cache/

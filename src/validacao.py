@@ -131,17 +131,24 @@ def gerar_bloco() -> str:
         meu = valor_do_projeto(anual, int(r["ano"]), r["metrica"])
         fonte = f"[{r['fonte_oficial']}]({r['url']})"
         if meu is None:
-            L.append(f"| {fonte} | {r['ano']} | {r['metrica']} | {fmt(oficial_gwh)} | n/a (year outside project period) | — | — | {r['escopo_oficial']} |")
+            L.append(
+                f"| {fonte} | {r['ano']} | {r['metrica']} | {fmt(oficial_gwh)} | n/a (year outside project period) | — | — | "
+                f"{r['escopo_oficial']} |"
+            )
             continue
         dif = meu - oficial_gwh
         L.append(
             f"| {fonte} | {r['ano']} | {r['metrica']} | {fmt(oficial_gwh)} | {fmt(meu)} | "
             f"{fmt(dif)} | {pct(dif / oficial_gwh * 100)} | {r['escopo_oficial']} |"
         )
-    L += ["",
-          "Differences are reported, not corrected. When the official source covers a wider scope "
-          "than ONS operational data, a gap is expected and must be read together with the scope column.",
-          ""]
+    L += [
+        "",
+        "Differences are reported, not corrected. A gap can come from scope (SIN vs. SEB), source (ONS vs. CCEE data) "
+        "and method (distributed generation is an ONS estimate). The scope column records what the official source "
+        "states; no further explanation is asserted. Only 2024 is reconciled externally; other years have no verified "
+        "official reference yet.",
+        "",
+    ]
     return "\n".join(L)
 
 
