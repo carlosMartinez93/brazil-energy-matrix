@@ -533,11 +533,14 @@ def _sub_var(v, ano_ini, ano_fim, janela):
 
 def _eixo_ano(fig, ano_ini, ano_fim):
     """Eixo X com anos inteiros (sem '2,022.5') e marca da transição de 2023, se estiver no intervalo."""
-    fig.update_xaxes(dtick=1, tickformat="d")
+    # tickvals explícitos: com dtick sozinho o último ano some em alguns gráficos (ex.: área)
+    fig.update_xaxes(tickmode="array", tickvals=list(range(ano_ini, ano_fim + 1)), tickformat="d")
     if ano_ini <= ANO_TRANSICAO <= ano_fim and ano_fim > ano_ini:
         fig.add_vline(x=ANO_TRANSICAO, line_dash="dot", line_color=TEXT_SEC, line_width=1)
+        # se 2023 é o último ano do slider, o rótulo à direita esticaria o eixo até 2024-2025
+        ancora = "right" if ano_fim == ANO_TRANSICAO else "left"
         fig.add_annotation(
-            x=ANO_TRANSICAO, y=1, yref="paper", xanchor="left", yanchor="top", showarrow=False,
+            x=ANO_TRANSICAO, y=1, yref="paper", xanchor=ancora, yanchor="top", showarrow=False,
             text="2023: quebra na série solar", font=dict(size=10, color=TEXT_PRI),
             bgcolor="rgba(26,29,39,0.85)",
         )

@@ -83,4 +83,12 @@ def test_solar_n_d_quando_so_ha_transicao(app):
 
 def test_eixo_x_com_anos_inteiros(app):
     _, fig_ev, *_ = chamar(app, [2016, 2025])
-    assert fig_ev.layout.xaxis.dtick == 1 and fig_ev.layout.xaxis.tickformat == "d"
+    assert fig_ev.layout.xaxis.tickformat == "d"
+    assert list(fig_ev.layout.xaxis.tickvals) == list(range(2016, 2026))  # todos os anos, inclusive o último
+
+
+def test_anotacao_de_2023_nao_estica_o_eixo_quando_2023_e_o_ultimo_ano(app):
+    _, fig_ev, *_ = chamar(app, [2016, 2023])
+    assert [a.xanchor for a in fig_ev.layout.annotations if "2023" in a.text] == ["right"]
+    _, fig_ev, *_ = chamar(app, [2016, 2025])
+    assert [a.xanchor for a in fig_ev.layout.annotations if "2023" in a.text] == ["left"]
